@@ -41,7 +41,7 @@ module Byteman
           return padded
         end
       end
-  end
+    end
 
 
   ##
