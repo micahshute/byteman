@@ -19,32 +19,37 @@ module Byteman
   #
   # len: (named) [Integer] The number of bytes you want to pad this number to 
   #
+  # type: (named) [Symbol] (default: :bytes) Determines if you are padding bytes or bits. Defaults to :bytes, also accepts :bits
+  # 
   # Note that this pads 0s to the front of the number, and returns a byte string if an integer or string is the input arg, and returns an array buffer if an array buffer is entered
   #
   # Unexpected results will occur if the number is greater than the number of total padded byte length
-  def self.pad(num: nil, len: )
-      if bytes
-        if num.is_a?(Array)
-          overvlow = len - (num.length % len)
-          return [0] * overflow + num
-        elsif num.is_a?(Integer)
-          pad(int2buf(num))
-        elsif num.is_a?(String)
-          pad(num.unpack("C*")).pack("C*")
-        else
-          ArguemntError.new("Num must be a Array, Integer, or ByteString")
-        end
+  def self.pad(num: nil, len: , type: :bytes)
+    raise ArgumentError.new("Type must be :bytes or :bits") if type != :bytes && type != :bits
+    if type == :bytes
+      if num.is_a?(Array)
+        overflow = len - (num.length % len)
+        return [0] * overflow + num
+      elsif num.is_a?(Integer)
+        hex(pad(num: int2buf(num), len: len))
+      elsif num.is_a?(String)
+        pad(num: num.unpack("C*"), len: len).pack("C*")
       else
-        if num.is_a?(Numeric)
-          bin_num = num.to_s(2)
-        else
-          bin_num = num
-          overflow = len - (bin_num.length % len)
-          padded = "0" * overflow + bin_num
-          return padded
-        end
+        raise ArgumentError.new("Num must be a Array, Integer, or ByteString")
       end
+    else
+      if num.is_a?(Integer)
+        bin_num = num.to_s(2)
+      elsif num.is_a?(String) && num.split('').all?{ |n| n == "0" || n == "1"}
+        bin_num = num
+      else
+        raise ArgumentError("If performing bit padding, the input must be an Integer or a string of bits")
+      end
+      overflow = len - (bin_num.length % len)
+      padded = "0" * overflow + bin_num
+      return padded
     end
+  end
 
 
   # str2digest args
@@ -67,13 +72,22 @@ module Byteman
     hex2buf(hex(dig))
   end
 
+  # hex2buf args
+  #
+  # hex: [String] hex string
+  #
+  # Returns an array of Integers, each representing a byte of data
+  def self.hex2buf(hex)
+    hex.unpack("C*")
+  end
+
   # digest2int args
   # 
   # dig: [String] hexdigest string
   # 
   # Returns a byte String half the length of the hexdigest
   def self.digest2int(dig)
-    hex2int(hex(dig))
+    dig.to_i(16)
   end
 
   # hex args
@@ -98,12 +112,20 @@ module Byteman
 
   # hexdigest args
   # 
-  # num: [Integer] accepts any Integer 
+  # arg: [Integer or String or Array] accepts any Integer or String or Array of Integers from 0-255 
   # 
   # Returns a hexdigest string
-  def self.hexdigest(num)
-    dig = num.to_s(16)
-    dig.length.odd? ? "0#{dig}" : dig
+  def self.hexdigest(arg)
+    if arg.is_a?(Integer)
+      dig = arg.to_s(16)
+      dig.length.odd? ? "0#{dig}" : dig
+    elsif arg.is_a?(Array) && arg.all?{|a| a.between?(0,255)}
+      buf2digest(arg)
+    elsif arg.is_a?(String)
+      arg.unpack("H*").first
+    else
+      raise ArgumentError.new("Input must be an integer, Array of integers between 0-255, or String")
+    end
   end
 
   # buf2digest args
