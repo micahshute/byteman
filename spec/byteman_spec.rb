@@ -20,6 +20,27 @@ RSpec.describe Byteman do
       expect(Byteman.pad(num: 42, len: 8, type: :bits)).to eq("00101010")
     end
 
+    it 'correctly pads a number to a bit length when the number is already the appropriate size' do 
+      expect(Byteman.pad(num: 2, len: 2, type: :bits)).to eq("10")
+    end
+
+    it "correctly reduces the size of a number to a bit length when the the number is too large" do 
+      expect(Byteman.pad(num: 4, len: 2, type: :bits)).to eq('00')
+    end
+
+    it 'correctly pads a number to a byte length when the number is already the appropriate size' do 
+      expect(Byteman.pad(num: Byteman.buf2int([1,0,0,1,1]), len: 4)).to eq(Byteman.hex([0,0,1,1]))
+    end
+
+    it "correctly reduces the size of a number to a byte length when the the number is too large" do 
+      expect(Byteman.pad(num: 255, len: 2).bytes).to eq("\x00\xff".bytes)
+    end
+
+    it "can pad on the LSB side of the number" do
+      expect(Byteman.pad(num: 42, len: 8, type: :bits, lsb: true)).to eq("10101000")
+      expect(Byteman.pad(num: "\xE3\x09", len: 8, lsb: true).bytes).to eq("\xE3\x09\x00\x00\x00\x00\x00\x00".bytes)
+    end
+
     it "correctly pads a bit string to a bit length" do
       expect(Byteman.pad(num: "11001", len: 16, type: :bits)).to eq("0000000000011001")
     end

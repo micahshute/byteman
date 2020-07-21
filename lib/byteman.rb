@@ -24,16 +24,26 @@ module Byteman
   # Note that this pads 0s to the front of the number, and returns a byte string if an integer or string is the input arg, and returns an array buffer if an array buffer is entered
   #
   # Unexpected results will occur if the number is greater than the number of total padded byte length
-  def self.pad(num: nil, len: , type: :bytes)
+  def self.pad(num: nil, len: , type: :bytes, lsb: false)
     raise ArgumentError.new("Type must be :bytes or :bits") if type != :bytes && type != :bits
     if type == :bytes
       if num.is_a?(Array)
-        overflow = len - (num.length % len)
-        return [0] * overflow + num
+        overflow = len - num.length
+        if overflow == 0
+          return num
+        elsif overflow < 0
+          return num[(num.length - len)..-1]
+        else
+          if lsb
+            return num + ([0] * overflow)
+          else
+            return [0] * overflow + num
+          end
+        end
       elsif num.is_a?(Integer)
-        hex(pad(num: int2buf(num), len: len))
+        hex(pad(num: int2buf(num), len: len, lsb: lsb))
       elsif num.is_a?(String)
-        pad(num: num.unpack("C*"), len: len).pack("C*")
+        pad(num: num.unpack("C*"), len: len, lsb: lsb).pack("C*")
       else
         raise ArgumentError.new("Num must be a Array, Integer, or ByteString")
       end
@@ -45,9 +55,20 @@ module Byteman
       else
         raise ArgumentError("If performing bit padding, the input must be an Integer or a string of bits")
       end
-      overflow = len - (bin_num.length % len)
-      padded = "0" * overflow + bin_num
-      return padded
+      overflow = len - bin_num.length 
+      if overflow == 0
+        return bin_num
+      elsif overflow < 0
+        return bin_num[(bin_num.length - len)..-1]
+      else
+        if lsb
+          padded = bin_num + "0" * overflow 
+          return padded
+        else
+          padded = "0" * overflow + bin_num
+          return padded
+        end
+      end
     end
   end
 
