@@ -53,7 +53,7 @@ module Byteman
       elsif num.is_a?(String) && num.split('').all?{ |n| n == "0" || n == "1"}
         bin_num = num
       else
-        raise ArgumentError("If performing bit padding, the input must be an Integer or a string of bits")
+        raise ArgumentError.new("If performing bit padding, the input must be an Integer or a string of bits")
       end
       overflow = len - bin_num.length 
       if overflow == 0
